@@ -33,7 +33,7 @@ src/main/java/com/example/vuelos/
 │   ├── FechaController.java
 │   ├── PagoController.java
 │   ├── PilotoController.java
-│   ├── ReservaController.java
+│   ├── ReservaController.javas
 │   ├── TarifaController.java
 │   ├── TarjetaController.java
 │   ├── UsuarioController.java
