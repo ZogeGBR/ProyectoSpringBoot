@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AeroSystem — Gestión de Vuelos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0a0c10;
+      --surface:  #111318;
+      --border:   #1e2230;
+      --accent:   #00e5ff;
+      --accent2:  #ff4d6d;
+      --accent3:  #b8ff57;
+      --text:     #e8eaf0;
+      --muted:    #5a6070;
+      --font-ui:  'Syne', sans-serif;
+      --font-mono:'Space Mono', monospace;
+      --radius:   6px;
+      --trans:    .18s cubic-bezier(.4,0,.2,1);
+    }
+
+    html, body, #root { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      overflow: hidden;
+    }
+
+    /* ── LAYOUT ── */
+    .shell { display: flex; height: 100vh; }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: 230px; flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      padding: 0 0 16px;
+      overflow-y: auto;
+    }
+    .sidebar-logo {
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 10px;
+    }
+    .sidebar-logo h1 {
+      font-size: 18px; font-weight: 800; letter-spacing: .04em;
+      color: var(--accent);
+    }
+    .sidebar-logo p { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: var(--font-mono); }
+
+    .nav-group { padding: 6px 12px 2px; }
+    .nav-group-label {
+      font-size: 9px; font-weight: 700; letter-spacing: .12em;
+      color: var(--muted); text-transform: uppercase;
+      padding: 6px 8px 4px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px; border-radius: var(--radius);
+      cursor: pointer; font-size: 13px; font-weight: 600;
+      color: var(--muted);
+      transition: background var(--trans), color var(--trans);
+      border: none; background: none; width: 100%; text-align: left;
+    }
+    .nav-item:hover { background: var(--border); color: var(--text); }
+    .nav-item.active { background: rgba(0,229,255,.1); color: var(--accent); }
+    .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+
+    /* ── MAIN ── */
+    .main {
+      flex: 1; display: flex; flex-direction: column;
+      overflow: hidden; background: var(--bg);
+    }
+    .topbar {
+      height: 54px; flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px;
+      background: var(--surface);
+    }
+    .topbar-title { font-size: 15px; font-weight: 800; letter-spacing: .02em; }
+    .topbar-actions { display: flex; gap: 8px; }
+
+    .content { flex: 1; overflow-y: auto; padding: 24px; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 16px; border-radius: var(--radius);
+      font-family: var(--font-ui); font-size: 13px; font-weight: 700;
+      cursor: pointer; border: none; transition: all var(--trans);
+      letter-spacing: .02em;
+    }
+    .btn-primary { background: var(--accent); color: #000; }
+    .btn-primary:hover { background: #33eaff; transform: translateY(-1px); }
+    .btn-danger  { background: var(--accent2); color: #fff; }
+    .btn-danger:hover  { background: #ff6b85; }
+    .btn-ghost  { background: var(--border); color: var(--text); }
+    .btn-ghost:hover  { background: #2a2f3e; }
+    .btn-sm { padding: 5px 10px; font-size: 11px; }
+
+    /* ── TABLE ── */
+    .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead { background: var(--surface); }
+    th {
+      padding: 11px 14px; text-align: left;
+      font-size: 10px; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-mono);
+      white-space: nowrap;
+    }
+    td {
+      padding: 11px 14px; border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+      font-family: var(--font-mono); font-size: 12px;
+    }
+    tr:last-child td { border-bottom: none; }
+    tbody tr { transition: background var(--trans); }
+    tbody tr:hover { background: rgba(255,255,255,.03); }
+    .td-actions { display: flex; gap: 6px; }
+
+    /* ── BADGE ── */
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 2px 8px; border-radius: 20px;
+      font-size: 10px; font-weight: 700; letter-spacing: .06em;
+      font-family: var(--font-mono);
+    }
+    .badge-blue   { background: rgba(0,229,255,.12); color: var(--accent); }
+    .badge-red    { background: rgba(255,77,109,.12); color: var(--accent2); }
+    .badge-green  { background: rgba(184,255,87,.12); color: var(--accent3); }
+    .badge-yellow { background: rgba(255,200,50,.12); color: #ffc832; }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.7);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100; backdrop-filter: blur(4px);
+      animation: fadeIn .15s ease;
+    }
+    @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 28px; width: 500px; max-width: 95vw;
+      max-height: 90vh; overflow-y: auto;
+      animation: slideUp .2s cubic-bezier(.4,0,.2,1);
+    }
+    @keyframes slideUp { from { transform:translateY(20px); opacity:0 } to { transform:translateY(0); opacity:1 } }
+    .modal-title {
+      font-size: 16px; font-weight: 800; margin-bottom: 20px;
+      color: var(--accent); letter-spacing: .04em;
+    }
+    .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+    /* ── FORM ── */
+    .form-grid { display: grid; gap: 14px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+    .field input, .field select {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 9px 12px;
+      color: var(--text); font-family: var(--font-mono); font-size: 13px;
+      outline: none; transition: border-color var(--trans);
+      width: 100%;
+    }
+    .field input:focus, .field select:focus { border-color: var(--accent); }
+    .field select option { background: var(--surface); }
+
+    /* ── STATS ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 18px 20px;
+      position: relative; overflow: hidden;
+    }
+    .stat-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    }
+    .stat-card.c1::before { background: var(--accent); }
+    .stat-card.c2::before { background: var(--accent2); }
+    .stat-card.c3::before { background: var(--accent3); }
+    .stat-card.c4::before { background: #ffc832; }
+    .stat-num { font-size: 32px; font-weight: 800; font-family: var(--font-mono); }
+    .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-top: 4px; }
+    .stat-icon { position: absolute; right: 16px; top: 16px; font-size: 28px; opacity: .15; }
+
+    /* ── EMPTY ── */
+    .empty {
+      text-align: center; padding: 60px 20px;
+      color: var(--muted); font-size: 14px;
+    }
+    .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: .4; }
+
+    /* ── TOAST ── */
+    .toast-wrap {
+      position: fixed; bottom: 24px; right: 24px; z-index: 200;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .toast {
+      padding: 12px 18px; border-radius: var(--radius);
+      font-size: 13px; font-weight: 600;
+      animation: slideUp .2s ease;
+      max-width: 300px;
+    }
+    .toast-success { background: rgba(184,255,87,.15); border: 1px solid var(--accent3); color: var(--accent3); }
+    .toast-error   { background: rgba(255,77,109,.15); border: 1px solid var(--accent2); color: var(--accent2); }
+
+    /* ── LOADING ── */
+    .loading { display: flex; align-items: center; justify-content: center; padding: 60px; }
+    .spinner {
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 3px solid var(--border); border-top-color: var(--accent);
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+/* ─── API ─── */
+const API = '';
+const api = {
+  get:    (url)         => fetch(API+url).then(r => r.json()),
+  post:   (url, body)   => fetch(API+url, { method:'POST',   headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }).then(r => r.json()),
+  put:    (url, body)   => fetch(API+url, { method:'PUT',    headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) }).then(r => r.json()),
+  delete: (url)         => fetch(API+url, { method:'DELETE' }).then(r => r.status),
+};
+
+/* ─── NAV CONFIG ─── */
+const NAV = [
+  { group: 'Operaciones', items: [
+    { id:'dashboard', label:'Dashboard',    icon:'🏠', endpoint: null },
+    { id:'vuelos',    label:'Vuelos',       icon:'✈️', endpoint:'/api/vuelos' },
+    { id:'reservas',  label:'Reservas',     icon:'🎫', endpoint:'/api/reservas' },
+    { id:'consultas', label:'Consultas',    icon:'🔍', endpoint:'/api/consultas' },
+  ]},
+  { group: 'Infraestructura', items: [
+    { id:'aeropuertos', label:'Aeropuertos', icon:'🏢', endpoint:'/api/aeropuertos' },
+    { id:'aerolineas',  label:'Aerolíneas',  icon:'🏷️', endpoint:'/api/aerolineas' },
+    { id:'aviones',     label:'Aviones',     icon:'🛩️', endpoint:'/api/aviones' },
+    { id:'asientos',    label:'Asientos',    icon:'💺', endpoint:'/api/asientos' },
+    { id:'ciudades',    label:'Ciudades',    icon:'🌆', endpoint:'/api/ciudades' },
+    { id:'fechas',      label:'Fechas',      icon:'📅', endpoint:'/api/fechas' },
+  ]},
+  { group: 'Personas', items: [
+    { id:'usuarios', label:'Usuarios',  icon:'👤', endpoint:'/api/usuarios' },
+    { id:'pilotos',  label:'Pilotos',   icon:'🧑‍✈️', endpoint:'/api/pilotos' },
+  ]},
+  { group: 'Finanzas', items: [
+    { id:'tarifas',  label:'Tarifas',   icon:'💵', endpoint:'/api/tarifas' },
+    { id:'pagos',    label:'Pagos',     icon:'💳', endpoint:'/api/pagos' },
+    { id:'tarjetas', label:'Tarjetas',  icon:'🃏', endpoint:'/api/tarjetas' },
+  ]},
+];
+
+/* ─── FIELD DEFINITIONS ─── */
+const FIELDS = {
+  vuelos:     [
+    { key:'numeroVuelo',   label:'Nº Vuelo',    type:'number' },
+    { key:'aerolinea',     label:'Aerolínea',   type:'ref',   ref:'aerolineas',   display:'nombreAerolinea' },
+    { key:'avion',         label:'Avión',        type:'ref',   ref:'aviones',      display:'numeroAvion' },
+    { key:'piloto',        label:'Piloto',       type:'ref',   ref:'pilotos',      display:'numeroPiloto' },
+    { key:'salida',        label:'Salida',       type:'ref',   ref:'fechas',       display:'fecha' },
+    { key:'destino',       label:'Destino',      type:'ref',   ref:'fechas',       display:'fecha' },
+  ],
+  reservas:   [
+    { key:'numeroReserva', label:'Nº Reserva',  type:'number' },
+    { key:'vuelo',         label:'Vuelo',        type:'ref',   ref:'vuelos',       display:'numeroVuelo' },
+    { key:'usuario',       label:'Usuario',      type:'ref',   ref:'usuarios',     display:'correoElectronicoUsuario' },
+    { key:'pago',          label:'Pago',         type:'ref',   ref:'pagos',        display:'numeroPago' },
+  ],
+  consultas:  [
+    { key:'numeroConsulta',label:'Nº Consulta', type:'number' },
+    { key:'usuario',       label:'Usuario',      type:'ref',   ref:'usuarios',     display:'correoElectronicoUsuario' },
+  ],
+  aeropuertos:[
+    { key:'nombreAeropuerto', label:'Nombre',   type:'text' },
+    { key:'ciudad',            label:'Ciudad',   type:'ref',   ref:'ciudades',     display:'nombreCiudad' },
+  ],
+  aerolineas: [
+    { key:'nombreAerolinea',  label:'Nombre',   type:'text' },
+  ],
+  aviones:    [
+    { key:'numeroAvion',      label:'Nº Avión', type:'number' },
+  ],
+  asientos:   [
+    { key:'filaAsiento',  label:'Fila',    type:'number' },
+    { key:'letraAsiento', label:'Letra',   type:'text' },
+    { key:'claseAsiento', label:'Clase',   type:'select', options:['BUSINESS','TURISTA','ECONOMY'] },
+    { key:'avion',        label:'Avión',   type:'ref',   ref:'aviones', display:'numeroAvion' },
+  ],
+  ciudades:   [
+    { key:'nombreCiudad',     label:'Nombre',   type:'text' },
+  ],
+  fechas:     [
+    { key:'fecha',            label:'Fecha',    type:'date' },
+  ],
+  usuarios:   [
+    { key:'numeroUsuario',         label:'Nº Usuario',   type:'number' },
+    { key:'dniPersona',            label:'DNI',          type:'number' },
+    { key:'nombrePersona',         label:'Nombre',       type:'text' },
+    { key:'apellidoPersona',       label:'Apellido',     type:'text' },
+    { key:'contraseniaUsuario',    label:'Contraseña',   type:'text' },
+    { key:'correoElectronicoUsuario', label:'Email',     type:'text' },
+  ],
+  pilotos:    [
+    { key:'numeroPiloto',    label:'Nº Piloto',   type:'number' },
+    { key:'dniPersona',      label:'DNI',         type:'number' },
+    { key:'nombrePersona',   label:'Nombre',      type:'text' },
+    { key:'apellidoPersona', label:'Apellido',    type:'text' },
+  ],
+  tarifas:    [
+    { key:'numeroTarifa',   label:'Nº Tarifa',  type:'number' },
+    { key:'impuestoTarifa', label:'Impuesto',   type:'number' },
+    { key:'precioTarifa',   label:'Precio',     type:'number' },
+    { key:'claseTarifa',    label:'Clase',      type:'select', options:['BUSINESS','TURISTA','ECONOMY'] },
+    { key:'vuelo',          label:'Vuelo',      type:'ref',   ref:'vuelos', display:'numeroVuelo' },
+  ],
+  pagos:      [
+    { key:'numeroPago',    label:'Nº Pago',    type:'number' },
+    { key:'cantidadPago',  label:'Cantidad',   type:'number' },
+  ],
+  tarjetas:   [
+    { key:'numeroTarjeta', label:'Nº Tarjeta', type:'number' },
+    { key:'numeroPago',    label:'Nº Pago',    type:'number' },
+    { key:'cantidadPago',  label:'Cantidad',   type:'number' },
+    { key:'tipoTarjeta',   label:'Tipo',       type:'select', options:['DEBITO','CREDITO'] },
+    { key:'usuario',       label:'Usuario',    type:'ref',   ref:'usuarios', display:'correoElectronicoUsuario' },
+  ],
+};
+
+/* ─── TOAST ─── */
+function useToast() {
+  const [toasts, setToasts] = useState([]);
+  const add = useCallback((msg, type='success') => {
+    const id = Date.now();
+    setToasts(t => [...t, { id, msg, type }]);
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3000);
+  }, []);
+  return { toasts, add };
+}
+
+/* ─── MODAL FORM ─── */
+function FormModal({ entityId, fields, data, refs, onSave, onClose }) {
+  const [form, setForm] = useState(() => {
+    const init = {};
+    fields.forEach(f => {
+      if (f.type === 'ref') init[f.key] = data?.[f.key]?.id ?? '';
+      else if (f.type === 'date') init[f.key] = data?.[f.key] ? String(data[f.key]).substring(0,10) : '';
+      else init[f.key] = data?.[f.key] ?? '';
+    });
+    return init;
+  });
+
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const handleSubmit = () => {
+    const payload = {};
+    fields.forEach(f => {
+      if (f.type === 'ref') {
+        payload[f.key] = form[f.key] ? { id: Number(form[f.key]) } : null;
+      } else if (f.type === 'number') {
+        payload[f.key] = Number(form[f.key]);
+      } else {
+        payload[f.key] = form[f.key];
+      }
+    });
+    onSave(payload);
+  };
+
+  const half = Math.ceil(fields.length / 2);
+  const pairs = [];
+  for (let i = 0; i < fields.length; i += 2) pairs.push([fields[i], fields[i+1]]);
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-title">{data ? '✏️ Editar' : '➕ Nuevo'} {entityId}</div>
+        <div className="form-grid">
+          {pairs.map((pair, i) => (
+            <div className={pair[1] ? 'form-row' : ''} key={i}>
+              {pair.filter(Boolean).map(f => (
+                <div className="field" key={f.key}>
+                  <label>{f.label}</label>
+                  {f.type === 'select' ? (
+                    <select value={form[f.key]} onChange={e => set(f.key, e.target.value)}>
+                      <option value="">— Seleccionar —</option>
+                      {f.options.map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  ) : f.type === 'ref' ? (
+                    <select value={form[f.key]} onChange={e => set(f.key, e.target.value)}>
+                      <option value="">— Seleccionar —</option>
+                      {(refs[f.ref] || []).map(r => (
+                        <option key={r.id} value={r.id}>
+                          {r[f.display] ?? r.id}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type={f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text'}
+                      value={form[f.key]}
+                      onChange={e => set(f.key, e.target.value)}
+                      placeholder={f.label}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
+          <button className="btn btn-primary" onClick={handleSubmit}>
+            {data ? 'Guardar cambios' : 'Crear'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── ENTITY VIEW ─── */
+function EntityView({ entityId, endpoint, toast }) {
+  const [rows, setRows]         = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [modal, setModal]       = useState(null); // null | 'new' | row
+  const [refs, setRefs]         = useState({});
+  const fields = FIELDS[entityId] || [];
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { setRows(await api.get(endpoint)); }
+    catch { toast('Error al cargar datos', 'error'); }
+    setLoading(false);
+  }, [endpoint]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // load refs
+  useEffect(() => {
+    const refFields = fields.filter(f => f.type === 'ref');
+    refFields.forEach(async f => {
+      try {
+        const data = await api.get(`/api/${f.ref}`);
+        setRefs(r => ({ ...r, [f.ref]: data }));
+      } catch {}
+    });
+  }, [entityId]);
+
+  const handleSave = async (payload) => {
+    try {
+      let res;
+      if (modal && modal !== 'new') {
+        res = await fetch(API + endpoint + '/' + modal.id, {
+          method: 'PUT', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+      } else {
+        res = await fetch(API + endpoint, {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+      }
+      if (!res.ok) {
+        let err;
+        try { err = await res.json(); } catch { err = {}; }
+        if (err.campos) {
+          const msgs = Object.entries(err.campos).map(([k,v]) => k + ': ' + v).join(' | ');
+          toast('Datos inválidos → ' + msgs, 'error');
+        } else {
+          toast(err.error || 'Error al guardar', 'error');
+        }
+        return;
+      }
+      setModal(null);
+      await load();
+      toast(modal && modal !== 'new' ? 'Registro actualizado ✓' : 'Registro creado ✓');
+    } catch (e) { console.error(e); toast('Error de conexión', 'error'); }
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('¿Eliminar este registro?')) return;
+    try {
+      await api.delete(`${endpoint}/${id}`);
+      toast('Eliminado ✓');
+      await load();
+    } catch { toast('Error al eliminar', 'error'); }
+  };
+
+  const getDisplay = (row, f) => {
+    if (f.type === 'ref') {
+      const val = row[f.key];
+      if (!val) return <span style={{color:'var(--muted)'}}>—</span>;
+      return <span className="badge badge-blue">{val[f.display] ?? val.id}</span>;
+    }
+    if (f.type === 'select') {
+      const colors = { BUSINESS:'badge-yellow', TURISTA:'badge-blue', ECONOMY:'badge-green',
+                       DEBITO:'badge-blue', CREDITO:'badge-red' };
+      return <span className={`badge ${colors[row[f.key]] || 'badge-blue'}`}>{row[f.key]}</span>;
+    }
+    const v = row[f.key];
+    if (v === null || v === undefined || v === '') return <span style={{color:'var(--muted)'}}>—</span>;
+    return String(v);
+  };
+
+  return (
+    <div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+        <div>
+          <div style={{ fontSize:13, color:'var(--muted)', fontFamily:'var(--font-mono)' }}>
+            {rows.length} registro{rows.length !== 1 ? 's' : ''}
+          </div>
+        </div>
+        <button className="btn btn-primary" onClick={() => setModal('new')}>
+          ＋ Nuevo
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="loading"><div className="spinner"/></div>
+      ) : rows.length === 0 ? (
+        <div className="empty">
+          <div className="empty-icon">📭</div>
+          <div>No hay registros todavía</div>
+          <div style={{fontSize:12, marginTop:6}}>Hacé clic en "Nuevo" para agregar el primero</div>
+        </div>
+      ) : (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                {fields.map(f => <th key={f.key}>{f.label}</th>)}
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(row => (
+                <tr key={row.id}>
+                  <td style={{color:'var(--muted)'}}>{row.id}</td>
+                  {fields.map(f => <td key={f.key}>{getDisplay(row, f)}</td>)}
+                  <td>
+                    <div className="td-actions">
+                      <button className="btn btn-ghost btn-sm" onClick={() => setModal(row)}>✏️</button>
+                      <button className="btn btn-danger btn-sm" onClick={() => handleDelete(row.id)}>🗑️</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {modal && (
+        <FormModal
+          entityId={entityId}
+          fields={fields}
+          data={modal !== 'new' ? modal : null}
+          refs={refs}
+          onSave={handleSave}
+          onClose={() => setModal(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ─── DASHBOARD ─── */
+function Dashboard({ toast }) {
+  const [counts, setCounts] = useState({});
+  useEffect(() => {
+    const endpoints = [
+      ['vuelos','/api/vuelos'], ['reservas','/api/reservas'],
+      ['usuarios','/api/usuarios'], ['pilotos','/api/pilotos'],
+    ];
+    endpoints.forEach(async ([k, url]) => {
+      try { const d = await api.get(url); setCounts(c => ({...c, [k]: d.length})); }
+      catch {}
+    });
+  }, []);
+
+  return (
+    <div>
+      <div className="stats-grid">
+        <div className="stat-card c1">
+          <div className="stat-icon">✈️</div>
+          <div className="stat-num">{counts.vuelos ?? '—'}</div>
+          <div className="stat-label">Vuelos</div>
+        </div>
+        <div className="stat-card c2">
+          <div className="stat-icon">🎫</div>
+          <div className="stat-num">{counts.reservas ?? '—'}</div>
+          <div className="stat-label">Reservas</div>
+        </div>
+        <div className="stat-card c3">
+          <div className="stat-icon">👤</div>
+          <div className="stat-num">{counts.usuarios ?? '—'}</div>
+          <div className="stat-label">Usuarios</div>
+        </div>
+        <div className="stat-card c4">
+          <div className="stat-icon">🧑‍✈️</div>
+          <div className="stat-num">{counts.pilotos ?? '—'}</div>
+          <div className="stat-label">Pilotos</div>
+        </div>
+      </div>
+
+      <div style={{
+        background:'var(--surface)', border:'1px solid var(--border)',
+        borderRadius:8, padding:'28px 32px',
+      }}>
+        <div style={{fontSize:20, fontWeight:800, marginBottom:8, color:'var(--accent)'}}>
+          ✈️ AeroSystem
+        </div>
+        <div style={{fontSize:13, color:'var(--muted)', lineHeight:1.7, maxWidth:480}}>
+          Sistema de gestión de vuelos. Usá el menú lateral para navegar
+          entre entidades: crear, editar y eliminar registros directamente
+          contra la API REST de Spring Boot.
+        </div>
+        <div style={{marginTop:20, display:'flex', gap:8, flexWrap:'wrap'}}>
+          {[['H2 Console','http://localhost:8080/h2-console'], ['API Vuelos','/api/vuelos'], ['API Reservas','/api/reservas']].map(([l,u]) => (
+            <a key={l} href={u} target="_blank"
+               style={{padding:'7px 14px', background:'var(--border)', borderRadius:'var(--radius)',
+                       fontSize:12, fontWeight:700, color:'var(--text)', textDecoration:'none',
+                       fontFamily:'var(--font-mono)'}}>
+              {l} ↗
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── APP ─── */
+function App() {
+  const [active, setActive] = useState('dashboard');
+  const { toasts, add: toast } = useToast();
+
+  const allItems = NAV.flatMap(g => g.items);
+  const current = allItems.find(i => i.id === active);
+
+  return (
+    <div className="shell">
+      {/* Sidebar */}
+      <nav className="sidebar">
+        <div className="sidebar-logo">
+          <h1>AEROSYSTEM</h1>
+          <p>flight management</p>
+        </div>
+        {NAV.map(group => (
+          <div className="nav-group" key={group.group}>
+            <div className="nav-group-label">{group.group}</div>
+            {group.items.map(item => (
+              <button
+                key={item.id}
+                className={`nav-item ${active === item.id ? 'active' : ''}`}
+                onClick={() => setActive(item.id)}
+              >
+                <span className="icon">{item.icon}</span>
+                {item.label}
+              </button>
+            ))}
+          </div>
+        ))}
+      </nav>
+
+      {/* Main */}
+      <div className="main">
+        <div className="topbar">
+          <div className="topbar-title">
+            {current?.icon} {current?.label}
+          </div>
+          <div style={{fontSize:11, color:'var(--muted)', fontFamily:'var(--font-mono)'}}>
+            Spring Boot + H2 · localhost:8080
+          </div>
+        </div>
+        <div className="content">
+          {active === 'dashboard' ? (
+            <Dashboard toast={toast} />
+          ) : current?.endpoint ? (
+            <EntityView
+              key={active}
+              entityId={active}
+              endpoint={current.endpoint}
+              toast={toast}
+            />
+          ) : null}
+        </div>
+      </div>
+
+      {/* Toasts */}
+      <div className="toast-wrap">
+        {toasts.map(t => (
+          <div key={t.id} className={`toast toast-${t.type}`}>{t.msg}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
