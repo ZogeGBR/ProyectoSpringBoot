@@ -17,10 +17,10 @@ import java.util.List;
 public interface AvionService {
 
     /**
-     * Obtiene todos los registros de {@link Avion} en la base de datos.
+     * Obtiene todos los aviones registrados en la base de datos.
      * @return lista con todos los registros, vacía si no hay ninguno
      */
-    List<Avion> getAllAvions();
+    List<Avion> getAllAviones();
 
     /**
      * Busca un {@link Avion} por su ID.
